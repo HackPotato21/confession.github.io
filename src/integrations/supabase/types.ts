@@ -14,6 +14,27 @@ export type Database = {
   }
   public: {
     Tables: {
+      anonymous_users: {
+        Row: {
+          anonymous_id: string
+          created_at: string
+          device_fingerprint: string
+          id: string
+        }
+        Insert: {
+          anonymous_id: string
+          created_at?: string
+          device_fingerprint: string
+          id?: string
+        }
+        Update: {
+          anonymous_id?: string
+          created_at?: string
+          device_fingerprint?: string
+          id?: string
+        }
+        Relationships: []
+      }
       chat_rooms: {
         Row: {
           created_at: string | null
@@ -41,6 +62,33 @@ export type Database = {
           room_type?: Database["public"]["Enums"]["room_type"]
           session_id?: string
           updated_at?: string | null
+        }
+        Relationships: []
+      }
+      confessions: {
+        Row: {
+          content: string | null
+          created_at: string
+          id: string
+          media_type: string | null
+          media_url: string | null
+          user_id: string
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          user_id: string
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          user_id?: string
         }
         Relationships: []
       }
