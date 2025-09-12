@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
-// Generate device fingerprint from browser/device characteristics
+// Generate device fingerprint from browser/device characteristics (stable)
 const generateDeviceFingerprint = (): string => {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -19,7 +19,6 @@ const generateDeviceFingerprint = (): string => {
       screenResolution: `${screen.width}x${screen.height}`,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       canvas: canvas.toDataURL(),
-      timestamp: Date.now(),
     })
   );
   
@@ -45,13 +44,13 @@ export const useAnonymousId = () => {
           .from('anonymous_users')
           .select('anonymous_id')
           .eq('device_fingerprint', deviceFingerprint)
-          .single();
+          .maybeSingle();
 
         if (existingUser) {
           setAnonymousId(existingUser.anonymous_id);
         } else {
           // Create new anonymous ID
-          let newId: string;
+          let newId: string = '';
           let isUnique = false;
           
           // Ensure the ID is unique
@@ -61,7 +60,7 @@ export const useAnonymousId = () => {
               .from('anonymous_users')
               .select('id')
               .eq('anonymous_id', newId)
-              .single();
+              .maybeSingle();
             
             if (!existingId) {
               isUnique = true;
@@ -72,12 +71,12 @@ export const useAnonymousId = () => {
           const { error } = await supabase
             .from('anonymous_users')
             .insert({
-              anonymous_id: newId!,
+              anonymous_id: newId,
               device_fingerprint: deviceFingerprint
             });
 
           if (!error) {
-            setAnonymousId(newId!);
+            setAnonymousId(newId);
           }
         }
       } catch (error) {
