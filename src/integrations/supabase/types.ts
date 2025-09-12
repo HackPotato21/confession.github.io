@@ -65,13 +65,119 @@ export type Database = {
         }
         Relationships: []
       }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          is_like: boolean
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          is_like: boolean
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          is_like?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "confession_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      confession_comments: {
+        Row: {
+          confession_id: string
+          content: string
+          created_at: string
+          id: string
+          parent_comment_id: string | null
+          user_id: string
+        }
+        Insert: {
+          confession_id: string
+          content: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          user_id: string
+        }
+        Update: {
+          confession_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          parent_comment_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confession_comments_confession_id_fkey"
+            columns: ["confession_id"]
+            isOneToOne: false
+            referencedRelation: "confessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "confession_comments_parent_comment_id_fkey"
+            columns: ["parent_comment_id"]
+            isOneToOne: false
+            referencedRelation: "confession_comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      confession_likes: {
+        Row: {
+          confession_id: string
+          created_at: string
+          id: string
+          is_like: boolean
+          user_id: string
+        }
+        Insert: {
+          confession_id: string
+          created_at?: string
+          id?: string
+          is_like: boolean
+          user_id: string
+        }
+        Update: {
+          confession_id?: string
+          created_at?: string
+          id?: string
+          is_like?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "confession_likes_confession_id_fkey"
+            columns: ["confession_id"]
+            isOneToOne: false
+            referencedRelation: "confessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       confessions: {
         Row: {
           content: string | null
           created_at: string
           id: string
           media_type: string | null
-          media_url: string | null
+          media_urls: Json | null
           user_id: string
         }
         Insert: {
@@ -79,7 +185,7 @@ export type Database = {
           created_at?: string
           id?: string
           media_type?: string | null
-          media_url?: string | null
+          media_urls?: Json | null
           user_id: string
         }
         Update: {
@@ -87,7 +193,7 @@ export type Database = {
           created_at?: string
           id?: string
           media_type?: string | null
-          media_url?: string | null
+          media_urls?: Json | null
           user_id?: string
         }
         Relationships: []

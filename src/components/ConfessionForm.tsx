@@ -5,65 +5,98 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
-import { Upload, Send } from 'lucide-react';
+import { Upload, Send, X } from 'lucide-react';
+
+interface MediaItem {
+  url: string;
+  type: 'image' | 'video';
+}
 
 interface ConfessionFormProps {
   anonymousId: string | null;
+  onConfessionPosted: () => void;
 }
 
-export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
+export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFormProps) => {
   const [content, setContent] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
+    const selectedFiles = Array.from(e.target.files || []);
+    
+    // Check if adding these files would exceed the limit
+    if (files.length + selectedFiles.length > 7) {
+      toast({
+        title: 'Too many files',
+        description: 'You can upload maximum 7 files per confession',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const validFiles: File[] = [];
+    
+    for (const file of selectedFiles) {
       // Check file size (3MB limit)
-      if (selectedFile.size > 3 * 1024 * 1024) {
+      if (file.size > 3 * 1024 * 1024) {
         toast({
           title: 'File too large',
-          description: 'Please select a file smaller than 3MB',
+          description: `${file.name} is larger than 3MB`,
           variant: 'destructive',
         });
-        return;
+        continue;
       }
 
       // Check file type
       const allowedTypes = ['image/', 'video/'];
-      const isAllowed = allowedTypes.some(type => selectedFile.type.startsWith(type));
+      const isAllowed = allowedTypes.some(type => file.type.startsWith(type));
       
       if (!isAllowed) {
         toast({
           title: 'Invalid file type',
-          description: 'Please select an image or video file',
+          description: `${file.name} is not an image or video`,
           variant: 'destructive',
         });
-        return;
+        continue;
       }
 
-      setFile(selectedFile);
+      validFiles.push(file);
     }
+
+    setFiles(prev => [...prev, ...validFiles]);
   };
 
-  const uploadFile = async (file: File): Promise<string | null> => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${anonymousId}-${Date.now()}.${fileExt}`;
-    
-    const { error } = await supabase.storage
-      .from('confession-media')
-      .upload(fileName, file);
+  const removeFile = (index: number) => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+  };
 
-    if (error) {
-      console.error('Upload error:', error);
-      return null;
-    }
+  const uploadFiles = async (files: File[]): Promise<MediaItem[]> => {
+    const uploadPromises = files.map(async (file, index) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${anonymousId}-${Date.now()}-${index}.${fileExt}`;
+      
+      const { error } = await supabase.storage
+        .from('confession-media')
+        .upload(fileName, file);
 
-    const { data } = supabase.storage
-      .from('confession-media')
-      .getPublicUrl(fileName);
+      if (error) {
+        console.error('Upload error:', error);
+        return null;
+      }
 
-    return data.publicUrl;
+      const { data } = supabase.storage
+        .from('confession-media')
+        .getPublicUrl(fileName);
+
+      return {
+        url: data.publicUrl,
+        type: file.type.startsWith('image/') ? 'image' as const : 'video' as const
+      };
+    });
+
+    const results = await Promise.all(uploadPromises);
+    return results.filter(result => result !== null) as MediaItem[];
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -78,10 +111,10 @@ export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
       return;
     }
 
-    if (!content.trim() && !file) {
+    if (!content.trim() && files.length === 0) {
       toast({
         title: 'Empty confession',
-        description: 'Please write something or upload a file',
+        description: 'Please write something or upload files',
         variant: 'destructive',
       });
       return;
@@ -90,15 +123,13 @@ export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
     setIsSubmitting(true);
 
     try {
-      let mediaUrl = null;
-      let mediaType = null;
+      let mediaUrls: MediaItem[] = [];
 
-      if (file) {
-        mediaUrl = await uploadFile(file);
-        if (!mediaUrl) {
-          throw new Error('Failed to upload file');
+      if (files.length > 0) {
+        mediaUrls = await uploadFiles(files);
+        if (mediaUrls.length !== files.length) {
+          throw new Error('Some files failed to upload');
         }
-        mediaType = file.type.startsWith('image/') ? 'image' : 'video';
       }
 
       const { error } = await supabase
@@ -106,8 +137,8 @@ export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
         .insert({
           user_id: anonymousId,
           content: content.trim() || null,
-          media_url: mediaUrl,
-          media_type: mediaType,
+          media_urls: JSON.stringify(mediaUrls),
+          media_type: files.length > 0 ? 'mixed' : null,
         });
 
       if (error) throw error;
@@ -118,7 +149,8 @@ export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
       });
 
       setContent('');
-      setFile(null);
+      setFiles([]);
+      onConfessionPosted();
       
       // Reset file input
       const fileInput = document.getElementById('file-input') as HTMLInputElement;
@@ -150,21 +182,48 @@ export const ConfessionForm = ({ anonymousId }: ConfessionFormProps) => {
             className="min-h-[120px] resize-none"
           />
           
-          <div className="flex items-center gap-4">
-            <div className="flex-1">
-              <Input
-                id="file-input"
-                type="file"
-                accept="image/*,video/*"
-                onChange={handleFileChange}
-                className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-              />
-              {file && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="flex-1">
+                <Input
+                  id="file-input"
+                  type="file"
+                  accept="image/*,video/*"
+                  multiple
+                  onChange={handleFileChange}
+                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                />
                 <p className="text-sm text-muted-foreground mt-2">
-                  Selected: {file.name} ({(file.size / 1024 / 1024).toFixed(2)}MB)
+                  {files.length}/7 files selected. Max 3MB per file.
                 </p>
-              )}
+              </div>
             </div>
+
+            {files.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {files.map((file, index) => (
+                  <div key={index} className="relative group">
+                    <div className="bg-muted rounded-lg p-2 text-sm">
+                      <div className="flex items-center justify-between">
+                        <span className="truncate">{file.name}</span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                          className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {(file.size / 1024 / 1024).toFixed(2)}MB
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="flex justify-end gap-2">
