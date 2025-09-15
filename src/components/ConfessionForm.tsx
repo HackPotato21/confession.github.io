@@ -71,10 +71,10 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadFiles = async (files: File[], userId: string): Promise<MediaItem[]> => {
+  const uploadFiles = async (files: File[]): Promise<MediaItem[]> => {
     const uploadPromises = files.map(async (file, index) => {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${userId}-${Date.now()}-${index}.${fileExt}`;
+      const fileName = `${anonymousId}-${Date.now()}-${index}.${fileExt}`;
       
       const { error } = await supabase.storage
         .from('confession-media')
@@ -102,8 +102,14 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Generate a fallback ID if anonymousId is not ready
-    const userId = anonymousId || Math.floor(10000 + Math.random() * 90000).toString();
+    if (!anonymousId) {
+      toast({
+        title: 'Error',
+        description: 'Anonymous ID not ready. Please wait a moment.',
+        variant: 'destructive',
+      });
+      return;
+    }
 
     if (!content.trim() && files.length === 0) {
       toast({
@@ -120,7 +126,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       let mediaUrls: MediaItem[] = [];
 
       if (files.length > 0) {
-        mediaUrls = await uploadFiles(files, userId);
+        mediaUrls = await uploadFiles(files);
         if (mediaUrls.length !== files.length) {
           throw new Error('Some files failed to upload');
         }
@@ -129,7 +135,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       const { error } = await supabase
         .from('confessions')
         .insert({
-          user_id: userId,
+          user_id: anonymousId,
           content: content.trim() || null,
           media_urls: JSON.stringify(mediaUrls),
           media_type: files.length > 0 ? 'mixed' : null,
@@ -223,7 +229,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
           <div className="flex justify-end gap-2">
             <Button
               type="submit"
-              disabled={isSubmitting || (!content.trim() && files.length === 0)}
+              disabled={isSubmitting || (!content.trim() && files.length === 0) || !anonymousId}
               className="flex items-center gap-2"
             >
               {isSubmitting ? (
