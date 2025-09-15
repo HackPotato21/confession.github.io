@@ -71,10 +71,10 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadFiles = async (files: File[]): Promise<MediaItem[]> => {
+  const uploadFiles = async (files: File[], userId: string): Promise<MediaItem[]> => {
     const uploadPromises = files.map(async (file, index) => {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${anonymousId}-${Date.now()}-${index}.${fileExt}`;
+      const fileName = `${userId}-${Date.now()}-${index}.${fileExt}`;
       
       const { error } = await supabase.storage
         .from('confession-media')
@@ -102,14 +102,8 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!anonymousId) {
-      toast({
-        title: 'Error',
-        description: 'Anonymous ID not ready. Please wait a moment.',
-        variant: 'destructive',
-      });
-      return;
-    }
+    // Generate a fallback ID if anonymousId is not ready
+    const userId = anonymousId || Math.floor(10000 + Math.random() * 90000).toString();
 
     if (!content.trim() && files.length === 0) {
       toast({
@@ -126,7 +120,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       let mediaUrls: MediaItem[] = [];
 
       if (files.length > 0) {
-        mediaUrls = await uploadFiles(files);
+        mediaUrls = await uploadFiles(files, userId);
         if (mediaUrls.length !== files.length) {
           throw new Error('Some files failed to upload');
         }
@@ -135,7 +129,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       const { error } = await supabase
         .from('confessions')
         .insert({
-          user_id: anonymousId,
+          user_id: userId,
           content: content.trim() || null,
           media_urls: JSON.stringify(mediaUrls),
           media_type: files.length > 0 ? 'mixed' : null,
