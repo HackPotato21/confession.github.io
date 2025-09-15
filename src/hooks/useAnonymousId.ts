@@ -81,6 +81,8 @@ export const useAnonymousId = () => {
         }
       } catch (error) {
         console.error('Error managing anonymous ID:', error);
+        // Set a fallback ID if database fails
+        setAnonymousId(generateAnonymousId());
       } finally {
         setIsLoading(false);
       }

@@ -344,7 +344,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <Badge variant="secondary" className="font-mono">
-                    #{confession.user_id}
+                    anonymous-{confession.user_id}
                   </Badge>
                   <span className="text-sm text-muted-foreground">
                     {formatDistanceToNow(new Date(confession.created_at), { addSuffix: true })}
@@ -448,7 +448,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
                       <div key={comment.id} className="bg-muted/50 rounded-lg p-4">
                         <div className="flex items-center justify-between mb-2">
                           <Badge variant="outline" className="font-mono text-xs">
-                            #{comment.user_id}
+                            anonymous-{comment.user_id}
                           </Badge>
                           <span className="text-xs text-muted-foreground">
                             {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
@@ -519,9 +519,9 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
                             {comment.replies.map((reply) => (
                               <div key={reply.id} className="bg-background/50 rounded p-3">
                                 <div className="flex items-center justify-between mb-1">
-                                  <Badge variant="outline" className="font-mono text-xs">
-                                    #{reply.user_id}
-                                  </Badge>
+                            <Badge variant="outline" className="font-mono text-xs">
+                              anonymous-{reply.user_id}
+                            </Badge>
                                   <span className="text-xs text-muted-foreground">
                                     {formatDistanceToNow(new Date(reply.created_at), { addSuffix: true })}
                                   </span>
