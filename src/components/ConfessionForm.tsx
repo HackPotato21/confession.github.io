@@ -22,6 +22,64 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Generate device fingerprint from browser/device characteristics (stable)
+  const generateDeviceFingerprint = (): string => {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.textBaseline = 'top';
+      ctx.font = '14px Arial';
+      ctx.fillText('Device fingerprint', 2, 2);
+    }
+    const fingerprint = btoa(
+      JSON.stringify({
+        userAgent: navigator.userAgent,
+        language: navigator.language,
+        platform: navigator.platform,
+        screenResolution: `${screen.width}x${screen.height}`,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        canvas: canvas.toDataURL(),
+      })
+    );
+    return fingerprint;
+  };
+
+  // Ensure an anonymous ID exists for this device/IP
+  const ensureAnonymousId = async (): Promise<string> => {
+    const deviceFingerprint = generateDeviceFingerprint();
+
+    // Check existing
+    const { data: existingUser } = await supabase
+      .from('anonymous_users')
+      .select('anonymous_id')
+      .eq('device_fingerprint', deviceFingerprint)
+      .maybeSingle();
+
+    if (existingUser?.anonymous_id) return existingUser.anonymous_id;
+
+    // Create new unique 5-digit ID
+    const generateAnonymousId = () => Math.floor(10000 + Math.random() * 90000).toString();
+
+    let newId = '';
+    let isUnique = false;
+    while (!isUnique) {
+      newId = generateAnonymousId();
+      const { data: existingId } = await supabase
+        .from('anonymous_users')
+        .select('id')
+        .eq('anonymous_id', newId)
+        .maybeSingle();
+      if (!existingId) isUnique = true;
+    }
+
+    const { error } = await supabase
+      .from('anonymous_users')
+      .insert({ anonymous_id: newId, device_fingerprint: deviceFingerprint });
+
+    if (error) throw error;
+    return newId;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     
@@ -71,10 +129,10 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const uploadFiles = async (files: File[]): Promise<MediaItem[]> => {
+  const uploadFiles = async (files: File[], userId: string): Promise<MediaItem[]> => {
     const uploadPromises = files.map(async (file, index) => {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${anonymousId}-${Date.now()}-${index}.${fileExt}`;
+      const fileName = `${userId}-${Date.now()}-${index}.${fileExt}`;
       
       const { error } = await supabase.storage
         .from('confession-media')
@@ -102,13 +160,18 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!anonymousId) {
-      toast({
-        title: 'Error',
-        description: 'Anonymous ID not ready. Please wait a moment.',
-        variant: 'destructive',
-      });
-      return;
+    let userId = anonymousId;
+    if (!userId) {
+      try {
+        userId = await ensureAnonymousId();
+      } catch (err) {
+        toast({
+          title: 'Error',
+          description: 'Failed to initialize anonymous ID. Please try again.',
+          variant: 'destructive',
+        });
+        return;
+      }
     }
 
     if (!content.trim() && files.length === 0) {
@@ -126,7 +189,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       let mediaUrls: MediaItem[] = [];
 
       if (files.length > 0) {
-        mediaUrls = await uploadFiles(files);
+        mediaUrls = await uploadFiles(files, userId);
         if (mediaUrls.length !== files.length) {
           throw new Error('Some files failed to upload');
         }
@@ -135,7 +198,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       const { error } = await supabase
         .from('confessions')
         .insert({
-          user_id: anonymousId,
+          user_id: userId,
           content: content.trim() || null,
           media_urls: JSON.stringify(mediaUrls),
           media_type: files.length > 0 ? 'mixed' : null,
@@ -229,18 +292,13 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
           <div className="flex justify-end gap-2">
             <Button
               type="submit"
-              disabled={isSubmitting || (!content.trim() && files.length === 0) || !anonymousId}
+              disabled={isSubmitting || (!content.trim() && files.length === 0)}
               className="flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
                   <Upload className="h-4 w-4 animate-spin" />
                   Posting...
-                </>
-              ) : !anonymousId ? (
-                <>
-                  <Upload className="h-4 w-4 animate-spin" />
-                  Loading...
                 </>
               ) : (
                 <>
