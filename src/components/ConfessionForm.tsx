@@ -229,13 +229,18 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
           <div className="flex justify-end gap-2">
             <Button
               type="submit"
-              disabled={isSubmitting || !anonymousId}
+              disabled={isSubmitting || (!content.trim() && files.length === 0)}
               className="flex items-center gap-2"
             >
               {isSubmitting ? (
                 <>
                   <Upload className="h-4 w-4 animate-spin" />
                   Posting...
+                </>
+              ) : !anonymousId ? (
+                <>
+                  <Upload className="h-4 w-4 animate-spin" />
+                  Loading...
                 </>
               ) : (
                 <>
