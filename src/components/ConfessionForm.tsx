@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { toast } from '@/hooks/use-toast';
 import { Upload, Send, X } from 'lucide-react';
+import CryptoJS from 'crypto-js';
 
 interface MediaItem {
   url: string;
@@ -47,6 +48,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   // Ensure an anonymous ID exists for this device/IP
   const ensureAnonymousId = async (): Promise<string> => {
     const deviceFingerprint = generateDeviceFingerprint();
+    const fingerprintHash = CryptoJS.MD5(deviceFingerprint).toString();
 
     // 1) Try local cache first (keeps the same ID on this device)
     try {
@@ -54,11 +56,11 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       if (cached) return cached;
     } catch {}
 
-    // 2) Lookup by device fingerprint in DB
+    // 2) Lookup by device fingerprint hash in DB
     const { data: existingUser } = await supabase
       .from('anonymous_users')
       .select('anonymous_id')
-      .eq('device_fingerprint', deviceFingerprint)
+      .eq('device_fingerprint_hash', fingerprintHash)
       .maybeSingle();
 
     if (existingUser?.anonymous_id) {
@@ -74,20 +76,24 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
 
       const { error: insertError } = await supabase
         .from('anonymous_users')
-        .insert({ anonymous_id: newId, device_fingerprint: deviceFingerprint });
+        .insert({ 
+          anonymous_id: newId, 
+          device_fingerprint: deviceFingerprint.substring(0, 500), // Keep first 500 chars for debugging
+          device_fingerprint_hash: fingerprintHash 
+        });
 
       if (!insertError) {
         try { localStorage.setItem('anonymous_id', newId); } catch {}
         return newId;
       }
 
-      // If unique violation, re-select using fingerprint and return if found
+      // If unique violation, re-select using fingerprint hash and return if found
       const code = (insertError as any)?.code;
       if (code === '23505') {
         const { data: afterConflict } = await supabase
           .from('anonymous_users')
           .select('anonymous_id')
-          .eq('device_fingerprint', deviceFingerprint)
+          .eq('device_fingerprint_hash', fingerprintHash)
           .maybeSingle();
         if (afterConflict?.anonymous_id) {
           try { localStorage.setItem('anonymous_id', afterConflict.anonymous_id); } catch {}
@@ -98,7 +104,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     }
 
     // 4) Final fallback: derive a deterministic ID from the fingerprint (stable per device)
-    const hash = Array.from(deviceFingerprint).reduce((acc, ch) => ((acc << 5) - acc) + ch.charCodeAt(0), 0);
+    const hash = fingerprintHash.split('').reduce((acc, ch) => ((acc << 5) - acc) + ch.charCodeAt(0), 0);
     const fallbackId = String(Math.abs(hash) % 90000 + 10000);
     try { localStorage.setItem('anonymous_id', fallbackId); } catch {}
     return fallbackId;

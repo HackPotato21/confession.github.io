@@ -19,18 +19,21 @@ export type Database = {
           anonymous_id: string
           created_at: string
           device_fingerprint: string
+          device_fingerprint_hash: string | null
           id: string
         }
         Insert: {
           anonymous_id: string
           created_at?: string
           device_fingerprint: string
+          device_fingerprint_hash?: string | null
           id?: string
         }
         Update: {
           anonymous_id?: string
           created_at?: string
           device_fingerprint?: string
+          device_fingerprint_hash?: string | null
           id?: string
         }
         Relationships: []
