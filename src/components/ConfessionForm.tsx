@@ -48,36 +48,60 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   const ensureAnonymousId = async (): Promise<string> => {
     const deviceFingerprint = generateDeviceFingerprint();
 
-    // Check existing
+    // 1) Try local cache first (keeps the same ID on this device)
+    try {
+      const cached = localStorage.getItem('anonymous_id');
+      if (cached) return cached;
+    } catch {}
+
+    // 2) Lookup by device fingerprint in DB
     const { data: existingUser } = await supabase
       .from('anonymous_users')
       .select('anonymous_id')
       .eq('device_fingerprint', deviceFingerprint)
       .maybeSingle();
 
-    if (existingUser?.anonymous_id) return existingUser.anonymous_id;
-
-    // Create new unique 5-digit ID
-    const generateAnonymousId = () => Math.floor(10000 + Math.random() * 90000).toString();
-
-    let newId = '';
-    let isUnique = false;
-    while (!isUnique) {
-      newId = generateAnonymousId();
-      const { data: existingId } = await supabase
-        .from('anonymous_users')
-        .select('id')
-        .eq('anonymous_id', newId)
-        .maybeSingle();
-      if (!existingId) isUnique = true;
+    if (existingUser?.anonymous_id) {
+      try { localStorage.setItem('anonymous_id', existingUser.anonymous_id); } catch {}
+      return existingUser.anonymous_id;
     }
 
-    const { error } = await supabase
-      .from('anonymous_users')
-      .insert({ anonymous_id: newId, device_fingerprint: deviceFingerprint });
+    // 3) Create a new unique 5-digit ID with retry on conflicts
+    const generateAnonymousId = () => Math.floor(10000 + Math.random() * 90000).toString();
 
-    if (error) throw error;
-    return newId;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const newId = generateAnonymousId();
+
+      const { error: insertError } = await supabase
+        .from('anonymous_users')
+        .insert({ anonymous_id: newId, device_fingerprint: deviceFingerprint });
+
+      if (!insertError) {
+        try { localStorage.setItem('anonymous_id', newId); } catch {}
+        return newId;
+      }
+
+      // If unique violation, re-select using fingerprint and return if found
+      const code = (insertError as any)?.code;
+      if (code === '23505') {
+        const { data: afterConflict } = await supabase
+          .from('anonymous_users')
+          .select('anonymous_id')
+          .eq('device_fingerprint', deviceFingerprint)
+          .maybeSingle();
+        if (afterConflict?.anonymous_id) {
+          try { localStorage.setItem('anonymous_id', afterConflict.anonymous_id); } catch {}
+          return afterConflict.anonymous_id;
+        }
+        // otherwise, try again with a new ID
+      }
+    }
+
+    // 4) Final fallback: derive a deterministic ID from the fingerprint (stable per device)
+    const hash = Array.from(deviceFingerprint).reduce((acc, ch) => ((acc << 5) - acc) + ch.charCodeAt(0), 0);
+    const fallbackId = String(Math.abs(hash) % 90000 + 10000);
+    try { localStorage.setItem('anonymous_id', fallbackId); } catch {}
+    return fallbackId;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
