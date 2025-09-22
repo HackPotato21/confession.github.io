@@ -262,84 +262,88 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Share Your Confession</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold bg-gradient-liquid-1 bg-clip-text text-transparent mb-2">
+          Share Your Confession
+        </h2>
+        <p className="text-muted-foreground">Express yourself freely in this anonymous space</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="relative">
           <Textarea
-            placeholder="What's on your mind? Share anonymously..."
+            placeholder="What's on your mind? Share your thoughts, feelings, or experiences..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="min-h-[120px] resize-none"
+            className="glass-input min-h-32 text-base resize-none transition-all duration-300 hover:bg-white/10 focus:bg-white/15 border-white/20"
           />
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="flex-1">
-                <Input
-                  id="file-input"
-                  type="file"
-                  accept="image/*,video/*"
-                  multiple
-                  onChange={handleFileChange}
-                  className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                />
-                <p className="text-sm text-muted-foreground mt-2">
-                  {files.length}/7 files selected. Max 3MB per file.
-                </p>
-              </div>
+          <div className="absolute bottom-3 right-3 text-xs text-muted-foreground bg-black/20 rounded px-2 py-1 backdrop-blur-sm">
+            {content.length}/1000
+          </div>
+        </div>
+
+        <div className="glass-card p-4 space-y-4">
+          <div className="flex items-center gap-4">
+            <div className="flex-1">
+              <Input
+                id="file-input"
+                type="file"
+                accept="image/*,video/*"
+                multiple
+                onChange={handleFileChange}
+                className="glass-input file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-gradient-liquid-1 file:text-white hover:file:opacity-90 transition-all duration-300"
+              />
+              <p className="text-sm text-muted-foreground mt-2 flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                {files.length}/7 files selected. Max 3MB per file.
+              </p>
             </div>
+          </div>
 
-            {files.length > 0 && (
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                {files.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <div className="bg-muted rounded-lg p-2 text-sm">
-                      <div className="flex items-center justify-between">
-                        <span className="truncate">{file.name}</span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => removeFile(index)}
-                          className="h-6 w-6 p-0 text-destructive hover:text-destructive/80"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {(file.size / 1024 / 1024).toFixed(2)}MB
-                      </p>
-                    </div>
+          {files.length > 0 && (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {files.map((file, index) => (
+                <div key={index} className="relative group glass-card p-3 hover:bg-white/10 transition-all duration-300">
+                  <div className="flex items-center justify-between">
+                    <span className="truncate text-sm font-medium">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeFile(index)}
+                      className="liquid-button w-6 h-6 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 ml-2"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {(file.size / 1024 / 1024).toFixed(2)}MB
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              type="submit"
-              disabled={isSubmitting || (!content.trim() && files.length === 0)}
-              className="flex items-center gap-2"
-            >
-              {isSubmitting ? (
-                <>
-                  <Upload className="h-4 w-4 animate-spin" />
-                  Posting...
-                </>
-              ) : (
-                <>
-                  <Send className="h-4 w-4" />
-                  Post Confession
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={isSubmitting || (!content.trim() && files.length === 0)}
+            className="liquid-button px-8 py-3 text-white font-medium rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed ripple"
+          >
+            {isSubmitting ? (
+              <>
+                <Upload className="h-4 w-4 animate-spin" />
+                Posting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4" />
+                Post Confession
+              </>
+            )}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };

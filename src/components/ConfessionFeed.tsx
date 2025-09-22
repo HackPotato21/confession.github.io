@@ -315,115 +315,117 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Recent Confessions</h2>
-        <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="latest">Latest Posts</SelectItem>
-            <SelectItem value="oldest">Oldest Posts</SelectItem>
-            <SelectItem value="popular">Most Popular</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex items-center justify-between glass-card p-4 rounded-xl">
+        <h2 className="text-2xl font-bold bg-gradient-liquid-1 bg-clip-text text-transparent">Recent Confessions</h2>
+        <div className="glass-card p-2 rounded-lg">
+          <Select value={sortBy} onValueChange={(value: SortOption) => setSortBy(value)}>
+            <SelectTrigger className="w-[180px] glass-input border-white/20">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="glass-card border-white/20 backdrop-blur-xl">
+              <SelectItem value="latest">Latest Posts</SelectItem>
+              <SelectItem value="oldest">Oldest Posts</SelectItem>
+              <SelectItem value="popular">Most Popular</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
       
       {confessions.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <p className="text-muted-foreground">
-              No confessions yet. Be the first to share!
-            </p>
-          </CardContent>
-        </Card>
+        <div className="glass-card p-12 text-center animate-float">
+          <div className="w-16 h-16 bg-gradient-liquid-2 rounded-full mx-auto mb-4 flex items-center justify-center">
+            <MessageCircle className="h-8 w-8 text-white" />
+          </div>
+          <p className="text-muted-foreground text-lg">
+            No confessions yet. Be the first to share!
+          </p>
+        </div>
       ) : (
-        <div className="space-y-4">
-          {confessions.map((confession) => (
-            <Card key={confession.id} className="overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <Badge variant="secondary" className="font-mono">
+        <div className="space-y-6">
+          {confessions.map((confession, index) => (
+            <div key={confession.id} className="glass-card p-6 animate-float hover:bg-white/10 transition-all duration-300" style={{ animationDelay: `${index * 0.1}s` }}>
+              <div className="flex items-center justify-between mb-4">
+                <div className="glass-card px-3 py-1 rounded-full bg-gradient-liquid-2">
+                  <span className="font-mono text-sm text-white font-bold">
                     anonymous-{confession.user_id}
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {formatDistanceToNow(new Date(confession.created_at), { addSuffix: true })}
                   </span>
                 </div>
+                <span className="text-sm text-muted-foreground bg-black/20 px-2 py-1 rounded-full backdrop-blur-sm">
+                  {formatDistanceToNow(new Date(confession.created_at), { addSuffix: true })}
+                </span>
+              </div>
 
-                {confession.content && (
-                  <p className="text-foreground mb-4 whitespace-pre-wrap">
-                    {confession.content}
-                  </p>
-                )}
+              {confession.content && (
+                <p className="text-foreground mb-4 whitespace-pre-wrap leading-relaxed">
+                  {confession.content}
+                </p>
+              )}
 
-                {confession.media_urls && confession.media_urls.length > 0 && (
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {confession.media_urls.map((media: MediaItem, index: number) => (
-                      <div key={index} className="rounded-lg overflow-hidden">
-                        {media.type === 'image' ? (
-                          <img
-                            src={media.url}
-                            alt="Confession media"
-                            className="w-full h-48 object-cover"
-                          />
-                        ) : (
-                          <video
-                            src={media.url}
-                            controls
-                            className="w-full h-48 object-cover"
-                          >
-                            Your browser does not support the video tag.
-                          </video>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Reaction buttons */}
-                <div className="flex items-center gap-4 mt-4 pt-4 border-t">
-                  <Button
-                    variant={confession.user_reaction === true ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => handleReaction(confession.id, true)}
-                    className="flex items-center gap-2"
-                  >
-                    <ThumbsUp className="h-4 w-4" />
-                    {confession.likes_count || 0}
-                  </Button>
-                  
-                  <Button
-                    variant={confession.user_reaction === false ? "destructive" : "ghost"}
-                    size="sm"
-                    onClick={() => handleReaction(confession.id, false)}
-                    className="flex items-center gap-2"
-                  >
-                    <ThumbsDown className="h-4 w-4" />
-                    {confession.dislikes_count || 0}
-                  </Button>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setShowComments(prev => ({ ...prev, [confession.id]: !prev[confession.id] }));
-                      if (!comments[confession.id]) {
-                        fetchComments(confession.id);
-                      }
-                    }}
-                    className="flex items-center gap-2"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    {confession.comments_count || 0}
-                  </Button>
+              {confession.media_urls && confession.media_urls.length > 0 && (
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {confession.media_urls.map((media: MediaItem, index: number) => (
+                    <div key={index} className="glass-card p-2 rounded-xl overflow-hidden group hover:scale-105 transition-transform duration-300">
+                      {media.type === 'image' ? (
+                        <img
+                          src={media.url}
+                          alt="Confession media"
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      ) : (
+                        <video
+                          src={media.url}
+                          controls
+                          className="w-full h-48 object-cover rounded-lg"
+                        >
+                          Your browser does not support the video tag.
+                        </video>
+                      )}
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {/* Reaction buttons */}
+              <div className="flex items-center gap-4 mt-6 pt-4 border-t border-white/10">
+                <button
+                  onClick={() => handleReaction(confession.id, true)}
+                  className={`liquid-button px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 ripple ${
+                    confession.user_reaction === true ? 'bg-gradient-liquid-1' : 'bg-white/10'
+                  }`}
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  <span className="font-medium">{confession.likes_count || 0}</span>
+                </button>
+                
+                <button
+                  onClick={() => handleReaction(confession.id, false)}
+                  className={`liquid-button px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 ripple ${
+                    confession.user_reaction === false ? 'bg-red-500/80' : 'bg-white/10'
+                  }`}
+                >
+                  <ThumbsDown className="h-4 w-4" />
+                  <span className="font-medium">{confession.dislikes_count || 0}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setShowComments(prev => ({ ...prev, [confession.id]: !prev[confession.id] }));
+                    if (!comments[confession.id]) {
+                      fetchComments(confession.id);
+                    }
+                  }}
+                  className="liquid-button px-4 py-2 rounded-xl flex items-center gap-2 transition-all duration-300 ripple bg-white/10"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  <span className="font-medium">{confession.comments_count || 0}</span>
+                </button>
+              </div>
 
                 {/* Comments section */}
                 {showComments[confession.id] && (
-                  <div className="mt-4 space-y-4">
+                  <div className="mt-6 space-y-4 glass-card p-4 rounded-xl">
                     {/* Add comment form */}
-                    <div className="flex gap-2">
+                    <div className="flex gap-3">
                       <Textarea
                         placeholder="Write a comment..."
                         value={commentingOn === confession.id ? commentText : ''}
@@ -432,15 +434,15 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
                           setCommentingOn(confession.id);
                           setReplyingTo(null);
                         }}
-                        className="flex-1 min-h-[60px]"
+                        className="glass-input flex-1 min-h-16 border-white/20"
                       />
-                      <Button
+                      <button
                         onClick={() => handleComment(confession.id)}
                         disabled={!commentText.trim()}
-                        size="sm"
+                        className="liquid-button px-6 py-2 rounded-xl text-white font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         Post
-                      </Button>
+                      </button>
                     </div>
 
                     {/* Comments list */}
@@ -558,11 +560,11 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
                     ))}
                   </div>
                 )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
