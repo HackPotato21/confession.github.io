@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import CryptoJS from 'crypto-js';
 
 // Generate device fingerprint from browser/device characteristics (stable)
 const generateDeviceFingerprint = (): string => {
@@ -35,60 +36,82 @@ export const useAnonymousId = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const getOrCreateAnonymousId = async () => {
+    const createOrRetrieveAnonymousId = async () => {
       try {
         const deviceFingerprint = generateDeviceFingerprint();
+        const fingerprintHash = CryptoJS.MD5(deviceFingerprint).toString();
         
-        // Check if this device already has an ID
+        // 1) Try local cache first (keeps the same ID on this device)
+        try {
+          const cached = localStorage.getItem('anonymous_id');
+          if (cached) {
+            setAnonymousId(cached);
+            setIsLoading(false);
+            return;
+          }
+        } catch { }
+        
+        // 2) First check if we already have an anonymous ID for this device
         const { data: existingUser } = await supabase
           .from('anonymous_users')
           .select('anonymous_id')
-          .eq('device_fingerprint', deviceFingerprint)
+          .eq('device_fingerprint_hash', fingerprintHash)
           .maybeSingle();
-
+          
         if (existingUser) {
           setAnonymousId(existingUser.anonymous_id);
+          try { localStorage.setItem('anonymous_id', existingUser.anonymous_id); } catch { }
         } else {
-          // Create new anonymous ID
-          let newId: string = '';
-          let isUnique = false;
-          
-          // Ensure the ID is unique
-          while (!isUnique) {
-            newId = generateAnonymousId();
-            const { data: existingId } = await supabase
+          // 3) Create a new unique 5-digit ID with retry on conflicts
+          const generateAnonymousId = () => Math.floor(10000 + Math.random() * 90000).toString();
+
+          for (let attempt = 0; attempt < 5; attempt++) {
+            const newId = generateAnonymousId();
+
+            const { error: insertError } = await supabase
               .from('anonymous_users')
-              .select('id')
-              .eq('anonymous_id', newId)
-              .maybeSingle();
-            
-            if (!existingId) {
-              isUnique = true;
+              .insert({ 
+                anonymous_id: newId, 
+                device_fingerprint: deviceFingerprint.substring(0, 500), // Keep first 500 chars for debugging
+                device_fingerprint_hash: fingerprintHash 
+              });
+
+            if (!insertError) {
+              setAnonymousId(newId);
+              try { localStorage.setItem('anonymous_id', newId); } catch { }
+              break;
             }
-          }
 
-          // Insert new anonymous user
-          const { error } = await supabase
-            .from('anonymous_users')
-            .insert({
-              anonymous_id: newId,
-              device_fingerprint: deviceFingerprint
-            });
-
-          if (!error) {
-            setAnonymousId(newId);
+            // If unique violation, re-select using fingerprint hash and return if found
+            const code = (insertError as any)?.code;
+            if (code === '23505') {
+              const { data: afterConflict } = await supabase
+                .from('anonymous_users')
+                .select('anonymous_id')
+                .eq('device_fingerprint_hash', fingerprintHash)
+                .maybeSingle();
+              if (afterConflict?.anonymous_id) {
+                setAnonymousId(afterConflict.anonymous_id);
+                try { localStorage.setItem('anonymous_id', afterConflict.anonymous_id); } catch { }
+                break;
+              }
+            }
           }
         }
       } catch (error) {
-        console.error('Error managing anonymous ID:', error);
-        // Set a fallback ID if database fails
-        setAnonymousId(generateAnonymousId());
-      } finally {
-        setIsLoading(false);
+        console.error('Error creating anonymous ID:', error);
+        // 4) Final fallback: derive a deterministic ID from the fingerprint (stable per device)
+        const deviceFingerprint = generateDeviceFingerprint();
+        const fingerprintHash = CryptoJS.MD5(deviceFingerprint).toString();
+        const hash = fingerprintHash.split('').reduce((acc, ch) => ((acc << 5) - acc) + ch.charCodeAt(0), 0);
+        const fallbackId = String(Math.abs(hash) % 90000 + 10000);
+        setAnonymousId(fallbackId);
+        try { localStorage.setItem('anonymous_id', fallbackId); } catch { }
       }
+      setIsLoading(false);
     };
 
-    getOrCreateAnonymousId();
+    createOrRetrieveAnonymousId();
   }, []);
 
   return { anonymousId, isLoading };
