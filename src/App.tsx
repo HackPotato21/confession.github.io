@@ -7,20 +7,30 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 
-const App = () => (
-  <ThemeProvider defaultTheme="system" storageKey="confession-0-theme">
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </ThemeProvider>
-);
+const App = () => {
+  // GitHub Pages SPA redirect handling
+  React.useEffect(() => {
+    if (window.location.search.startsWith('?/')) {
+      const redirect = window.location.search.slice(2).split('&').map(s => s.replace(/~and~/g, '&')).join('?');
+      window.history.replaceState(null, '', window.location.pathname + redirect + window.location.hash);
+    }
+  }, []);
+
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="confession-0-theme">
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter basename={process.env.NODE_ENV === 'production' ? '/confession-0' : ''}>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
+  );
+};
 
 export default App;

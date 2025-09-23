@@ -2,7 +2,7 @@ import React from 'react';
 
 export const CreditLink = React.memo(() => {
   const handleClick = () => {
-    window.open('https://www.instagram.com/with._.hacker/#', '_blank', 'noopener,noreferrer');
+    window.location.href = 'https://www.instagram.com/with._.hacker';
   };
 
   return (
