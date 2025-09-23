@@ -28,12 +28,12 @@ const Index = () => {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Animated background blobs */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="liquid-blob absolute top-10 left-10 w-32 h-32 opacity-30"></div>
-        <div className="liquid-blob absolute top-40 right-20 w-24 h-24 opacity-20" style={{ animationDelay: '2s' }}></div>
-        <div className="liquid-blob absolute bottom-20 left-1/4 w-40 h-40 opacity-25" style={{ animationDelay: '4s' }}></div>
-        <div className="liquid-blob absolute bottom-40 right-10 w-20 h-20 opacity-30" style={{ animationDelay: '6s' }}></div>
+      {/* Optimized animated background blobs */}
+      <div className="absolute inset-0 pointer-events-none gpu-accelerated">
+        <div className="liquid-blob absolute top-10 left-10 w-32 h-32 opacity-30" style={{ animationDelay: '0s' }}></div>
+        <div className="liquid-blob absolute top-40 right-20 w-24 h-24 opacity-20" style={{ animationDelay: '3s' }}></div>
+        <div className="liquid-blob absolute bottom-20 left-1/4 w-40 h-40 opacity-25" style={{ animationDelay: '6s' }}></div>
+        <div className="liquid-blob absolute bottom-40 right-10 w-20 h-20 opacity-30" style={{ animationDelay: '9s' }}></div>
       </div>
 
       {/* Header with user info and theme toggle */}
@@ -60,17 +60,17 @@ const Index = () => {
       </div>
 
       <div className="relative z-10 container mx-auto px-4 py-8">
-        <div className="text-center mb-8">
-          <p className="text-xl text-muted-foreground animate-float" style={{ animationDelay: '0.5s' }}>
+        <div className="text-center mb-8 gpu-accelerated">
+          <p className="text-xl text-muted-foreground float-animation" style={{ animationDelay: '1s' }}>
             Share your thoughts anonymously in a beautiful glassy interface
           </p>
         </div>
 
-        <div className="max-w-2xl mx-auto space-y-8">
-          <div className="glass-card p-8 animate-glow-pulse">
+        <div className="max-w-2xl mx-auto space-y-8 gpu-accelerated">
+          <div className="glass-card p-8">
             <div className="relative">
               <div className="absolute -top-2 -left-2 w-4 h-4 bg-primary-glow rounded-full blur-sm animate-pulse"></div>
-              <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-accent-glow rounded-full blur-sm animate-pulse" style={{ animationDelay: '1s' }}></div>
+              <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-accent-glow rounded-full blur-sm animate-pulse" style={{ animationDelay: '2s' }}></div>
               <ConfessionForm 
                 anonymousId={anonymousId} 
                 onConfessionPosted={handleConfessionPosted}
