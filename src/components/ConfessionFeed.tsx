@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -46,7 +46,7 @@ interface ConfessionFeedProps {
 
 type SortOption = 'latest' | 'oldest' | 'popular';
 
-export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedProps) => {
+export const ConfessionFeed = React.memo(({ anonymousId, refreshTrigger }: ConfessionFeedProps) => {
   const [confessions, setConfessions] = useState<Confession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sortBy, setSortBy] = useState<SortOption>('latest');
@@ -56,7 +56,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
   const [comments, setComments] = useState<{ [key: string]: Comment[] }>({});
   const [showComments, setShowComments] = useState<{ [key: string]: boolean }>({});
 
-  const fetchConfessions = async () => {
+  const fetchConfessions = useCallback(async () => {
     try {
       let query = supabase.from('confessions').select(`
         *,
@@ -126,7 +126,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [sortBy, anonymousId]);
 
   const fetchComments = async (confessionId: string) => {
     try {
@@ -170,7 +170,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
     }
   };
 
-  const handleReaction = async (confessionId: string, isLike: boolean) => {
+  const handleReaction = useCallback(async (confessionId: string, isLike: boolean) => {
     if (!anonymousId) return;
 
     try {
@@ -210,7 +210,7 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
     } catch (error) {
       console.error('Error handling reaction:', error);
     }
-  };
+  }, [anonymousId, fetchConfessions]);
 
   const handleCommentReaction = async (commentId: string, isLike: boolean) => {
     if (!anonymousId) return;
@@ -566,4 +566,4 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
         )}
     </div>
   );
-};
+});

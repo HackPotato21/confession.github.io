@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import React, { useState, useCallback, lazy, Suspense } from 'react';
 import { ConfessionForm } from '@/components/ConfessionForm';
 import { ConfessionFeed } from '@/components/ConfessionFeed';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { CreditLink } from '@/components/CreditLink';
 import { useAnonymousId } from '@/hooks/useAnonymousId';
 import { Card } from '@/components/ui/card';
 
@@ -9,9 +10,9 @@ const Index = () => {
   const { anonymousId, isLoading: idLoading } = useAnonymousId();
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  const handleConfessionPosted = () => {
+  const handleConfessionPosted = useCallback(() => {
     setRefreshTrigger(prev => prev + 1);
-  };
+  }, []);
 
   if (idLoading) {
     return (
@@ -83,6 +84,9 @@ const Index = () => {
           />
         </div>
       </div>
+      
+      {/* Credit Link */}
+      <CreditLink />
     </div>
   );
 };

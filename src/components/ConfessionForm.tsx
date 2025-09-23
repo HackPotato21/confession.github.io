@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ interface ConfessionFormProps {
   onConfessionPosted: () => void;
 }
 
-export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFormProps) => {
+export const ConfessionForm = React.memo(({ anonymousId, onConfessionPosted }: ConfessionFormProps) => {
   const [content, setContent] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -110,7 +110,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     return fallbackId;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFiles = Array.from(e.target.files || []);
     
     // Check if adding these files would exceed the limit
@@ -153,11 +153,11 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     }
 
     setFiles(prev => [...prev, ...validFiles]);
-  };
+  }, [files.length]);
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
   const uploadFiles = async (files: File[], userId: string): Promise<MediaItem[]> => {
     const uploadPromises = files.map(async (file, index) => {
@@ -187,7 +187,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     return results.filter(result => result !== null) as MediaItem[];
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
     let userId = anonymousId;
@@ -259,7 +259,7 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [anonymousId, content, files, onConfessionPosted]);
 
   return (
     <div className="space-y-6">
@@ -346,4 +346,4 @@ export const ConfessionForm = ({ anonymousId, onConfessionPosted }: ConfessionFo
       </form>
     </div>
   );
-};
+});

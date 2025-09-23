@@ -216,4 +216,27 @@ All colors MUST be HSL.
       inset 0 1px 0 rgba(255, 255, 255, 0.2),
       0 0 20px rgba(147, 51, 234, 0.3);
   }
+
+  /* Performance optimizations */
+  * {
+    will-change: auto;
+  }
+
+  img, video {
+    content-visibility: auto;
+    contain-intrinsic-size: 1px 200px;
+  }
+
+  /* Reduce motion for users who prefer it */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+    
+    .liquid-blob {
+      animation: none !important;
+    }
+  }
 }
