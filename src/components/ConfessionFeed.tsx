@@ -564,7 +564,6 @@ export const ConfessionFeed = ({ anonymousId, refreshTrigger }: ConfessionFeedPr
             ))}
           </div>
         )}
-      </div>
     </div>
   );
 };
