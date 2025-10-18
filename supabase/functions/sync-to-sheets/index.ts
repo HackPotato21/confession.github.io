@@ -21,31 +21,43 @@ interface GoogleServiceAccount {
 }
 
 async function getAccessToken(serviceAccount: GoogleServiceAccount): Promise<string> {
-  const jwtHeader = btoa(JSON.stringify({
+  const header = {
     alg: "RS256",
     typ: "JWT"
-  }));
+  };
 
   const now = Math.floor(Date.now() / 1000);
-  const jwtClaimSet = btoa(JSON.stringify({
+  const claim = {
     iss: serviceAccount.client_email,
     scope: "https://www.googleapis.com/auth/spreadsheets",
     aud: serviceAccount.token_uri,
     exp: now + 3600,
     iat: now
-  }));
+  };
 
-  const unsignedJwt = `${jwtHeader}.${jwtClaimSet}`;
+  // Base64url encode
+  const base64url = (obj: any) => {
+    return btoa(JSON.stringify(obj))
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=/g, '');
+  };
+
+  const headerEncoded = base64url(header);
+  const claimEncoded = base64url(claim);
+  const unsignedToken = `${headerEncoded}.${claimEncoded}`;
+
+  // Import private key
+  const pemContents = serviceAccount.private_key
+    .replace(/-----BEGIN PRIVATE KEY-----/, "")
+    .replace(/-----END PRIVATE KEY-----/, "")
+    .replace(/\s/g, "");
   
-  // Import the private key
-  const privateKey = await crypto.subtle.importKey(
+  const binaryDer = Uint8Array.from(atob(pemContents), c => c.charCodeAt(0));
+
+  const key = await crypto.subtle.importKey(
     "pkcs8",
-    new TextEncoder().encode(
-      serviceAccount.private_key
-        .replace(/-----BEGIN PRIVATE KEY-----/, "")
-        .replace(/-----END PRIVATE KEY-----/, "")
-        .replace(/\s/g, "")
-    ).buffer,
+    binaryDer,
     {
       name: "RSASSA-PKCS1-v1_5",
       hash: "SHA-256",
@@ -54,14 +66,19 @@ async function getAccessToken(serviceAccount: GoogleServiceAccount): Promise<str
     ["sign"]
   );
 
-  // Sign the JWT
+  // Sign the token
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
-    privateKey,
-    new TextEncoder().encode(unsignedJwt)
+    key,
+    new TextEncoder().encode(unsignedToken)
   );
 
-  const signedJwt = `${unsignedJwt}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
+  const signatureEncoded = btoa(String.fromCharCode(...new Uint8Array(signature)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=/g, '');
+
+  const jwt = `${unsignedToken}.${signatureEncoded}`;
 
   // Exchange JWT for access token
   const response = await fetch(serviceAccount.token_uri, {
@@ -69,8 +86,14 @@ async function getAccessToken(serviceAccount: GoogleServiceAccount): Promise<str
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",
     },
-    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${signedJwt}`,
+    body: `grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=${jwt}`,
   });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error("Token exchange failed:", error);
+    throw new Error(`Failed to get access token: ${error}`);
+  }
 
   const data = await response.json();
   return data.access_token;
