@@ -3,6 +3,7 @@ import { ConfessionForm } from '@/components/ConfessionForm';
 import { ConfessionFeed } from '@/components/ConfessionFeed';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { CreditLink } from '@/components/CreditLink';
+import { SheetsSync } from '@/components/SheetsSync';
 import { useAnonymousId } from '@/hooks/useAnonymousId';
 import { Card } from '@/components/ui/card';
 
@@ -82,6 +83,10 @@ const Index = () => {
             anonymousId={anonymousId}
             refreshTrigger={refreshTrigger}
           />
+
+          <div className="glass-card p-8">
+            <SheetsSync />
+          </div>
         </div>
       </div>
       
